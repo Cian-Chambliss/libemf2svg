@@ -127,6 +127,16 @@ set_target_properties(emf2svg
 
 # Compile the executable
 add_executable(emf2svg-conv src/conv/emf2svg.cpp)
+
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+   # Mac OS X specific code
+target_link_libraries(emf2svg
+    ${PNG_LIBRARIES}
+    ${EXTERNAL_ICONV}
+    ${FREETYPE_LIBRARIES}
+    ${FONTCONFIG_LIBRARIES}
+) 
+ELSE(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")   
 target_link_libraries(emf2svg
     ${PNG_LIBRARIES}
     ${EXTERNAL_ICONV}
@@ -134,6 +144,7 @@ target_link_libraries(emf2svg
     ${FREETYPE_LIBRARIES}
     ${FONTCONFIG_LIBRARIES}
 ) 
+ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 target_link_libraries(emf2svg-conv
     emf2svg
