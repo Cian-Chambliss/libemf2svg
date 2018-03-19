@@ -646,7 +646,7 @@ int U_emf_onerec_draw(const char *contents, const char *blimit, int recnum,
     return (size);
 }
 
-int emf2svg(char *contents, size_t length, char **out, size_t *out_length,
+static int __emf2svg(char *contents, size_t length, const char *outfilename, char **out, size_t *out_length,
             generatorOptions *options) {
     size_t off = 0;
     size_t result;
@@ -687,7 +687,13 @@ int emf2svg(char *contents, size_t length, char **out, size_t *out_length,
     blimit = contents + length;
     int err = 1;
 
-    stream = open_memstream(out, out_length);
+    if( outfilename ) {
+        // Write to a file on disk
+        stream = fopen(outfilename,"w");
+    } else {
+        // Write to a memory buffer
+        stream = open_memstream(out, out_length);
+    }
     if (stream == NULL) {
         if (states->verbose) {
             printf("Failed to allocate output stream\n");
@@ -849,6 +855,16 @@ int emf2svg_is_emfplus(char *contents, size_t length, bool *is_emfp) {
         }
     } // end of while
     return err;
+}
+
+int emf2svg(char *contents, size_t length, char **out, size_t *out_length,
+            generatorOptions *options) {
+    return __emf2svg(contents,length,NULL,out,out_length,options);
+}
+
+int femf2svg(char *contents, size_t length, const char * outputfilename,
+            generatorOptions *options) {
+    return __emf2svg(contents,length,outputfilename,NULL,NULL,options);
 }
 
 #ifdef __cplusplus

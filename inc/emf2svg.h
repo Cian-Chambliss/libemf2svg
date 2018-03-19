@@ -24,8 +24,10 @@ typedef struct {
     double imgWidth;
 } generatorOptions;
 
-// convert function
+// convert functions
 int emf2svg(char *contents, size_t length, char **out, size_t *out_length,
+            generatorOptions *options);
+int femf2svg(char *contents, size_t length, const char * outputfilename,
             generatorOptions *options);
 
 // check if emf file contains emf+ records
