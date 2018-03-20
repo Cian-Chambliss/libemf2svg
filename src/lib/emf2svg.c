@@ -646,27 +646,13 @@ int U_emf_onerec_draw(const char *contents, const char *blimit, int recnum,
     return (size);
 }
 
-static int __emf2svg(char *contents, size_t length, const char *outfilename, char **out, size_t *out_length,
-            generatorOptions *options) {
-    size_t off = 0;
-    size_t result;
-    int OK = 1;
-    int recnum = 0;
-    PU_ENHMETARECORD pEmr;
-    char *blimit;
-    FILE *stream;
-
-#if U_BYTE_SWAP
-    // This is a Big Endian machine, EMF data is Little Endian
-    U_emf_endian(contents, length, 0); // LE to BE
-#endif
-
+static drawingStates *createStates(generatorOptions *options)
+{
     drawingStates *states = (drawingStates *)calloc(1, sizeof(drawingStates));
     states->verbose = options->verbose;
     states->emfplus = options->emfplus;
     states->imgWidth = options->imgWidth;
     states->imgHeight = options->imgHeight;
-    states->endAddress = (intptr_t)contents + (intptr_t)length;
     if ((options->nameSpace != NULL) && (strlen(options->nameSpace) != 0)) {
         states->nameSpace = options->nameSpace;
         states->nameSpaceString =
@@ -682,26 +668,39 @@ static int __emf2svg(char *contents, size_t length, const char *outfilename, cha
      * states->objectTableSize + 1 (for easier index manipulation since
      * indexes in emf files start at 1 and not 0)*/
     states->objectTableSize = -1;
-    setTransformIdentity(states);
+    return states;
+}
+
+static void destroyStates(drawingStates *states)
+{
+    freeObjectTable(states);
+    freePathStack(states->emfStructure.pathStack);
+    free_path(&(states->currentPath));
+    free(states->objectTable);
+    freeDeviceContext(&(states->currentDeviceContext));
+    freeDeviceContextStack(states);
+    freeEmfImageLibrary(states);
+    free(states);
+}
+
+
+static int __emf2svg(char *contents, size_t length,drawingStates *states, FILE *stream,int err,int OK)
+{
+    size_t off = 0;
+    size_t result;
+    int recnum = 0;
+    PU_ENHMETARECORD pEmr;
+    char *blimit;
+    
+    setTransformIdentity(states);                
+
+#if U_BYTE_SWAP
+    // This is a Big Endian machine, EMF data is Little Endian
+    U_emf_endian(contents, length, 0); // LE to BE
+#endif
 
     blimit = contents + length;
-    int err = 1;
-
-    if( outfilename ) {
-        // Write to a file on disk
-        stream = fopen(outfilename,"w");
-    } else {
-        // Write to a memory buffer
-        stream = open_memstream(out, out_length);
-    }
-    if (stream == NULL) {
-        if (states->verbose) {
-            printf("Failed to allocate output stream\n");
-        }
-        FLAG_RESET;
-        err = 0;
-        OK = 0;
-    }
+    states->endAddress = (intptr_t)contents + (intptr_t)length;
 
     // analyze emf structure
     while (OK) {
@@ -792,20 +791,66 @@ static int __emf2svg(char *contents, size_t length, const char *outfilename, cha
         }
     } // end of while
     FLAG_RESET;
-    freeObjectTable(states);
-    freePathStack(states->emfStructure.pathStack);
-    free_path(&(states->currentPath));
-    free(states->objectTable);
-    freeDeviceContext(&(states->currentDeviceContext));
-    freeDeviceContextStack(states);
-    freeEmfImageLibrary(states);
-    free(states);
+    return err;
+}
+
+
+int emf2svg(char *contents, size_t length, char **out, size_t *out_length,
+            generatorOptions *options) {
+    int err = 1;
+    int OK = 1;
+    drawingStates *states = createStates(options);
+    FILE *stream;
+
+    // Write to a memory buffer
+    stream = open_memstream(out, out_length);
+    if (stream == NULL) {
+        if (states->verbose) {
+            printf("Failed to allocate output stream\n");
+        }
+        FLAG_RESET;
+        err = 0;
+        OK = 0;
+    }    
+
+    err = __emf2svg(contents, length,states, stream, err, OK);
+
+    destroyStates(states);
 
     fflush(stream);
     fclose(stream);
 
     return err;
 }
+
+int femf2svg(char *contents, size_t length, const char * outputfilename,
+            generatorOptions *options) {
+    int err = 1;
+    int OK = 1;
+    drawingStates *states = createStates(options);
+    FILE *stream;
+
+    // Write to a file on disk
+    stream = fopen(outputfilename,"w");
+    if (stream == NULL) {
+        if (states->verbose) {
+            printf("Failed to allocate output stream\n");
+        }
+        FLAG_RESET;
+        err = 0;
+        OK = 0;
+    }    
+
+    err = __emf2svg(contents, length,states, stream, err, OK);
+
+    destroyStates(states);
+
+    fflush(stream);
+    fclose(stream);
+
+    return err;
+}
+
 
 int emf2svg_is_emfplus(char *contents, size_t length, bool *is_emfp) {
     size_t off = 0;
@@ -855,16 +900,6 @@ int emf2svg_is_emfplus(char *contents, size_t length, bool *is_emfp) {
         }
     } // end of while
     return err;
-}
-
-int emf2svg(char *contents, size_t length, char **out, size_t *out_length,
-            generatorOptions *options) {
-    return __emf2svg(contents,length,NULL,out,out_length,options);
-}
-
-int femf2svg(char *contents, size_t length, const char * outputfilename,
-            generatorOptions *options) {
-    return __emf2svg(contents,length,outputfilename,NULL,NULL,options);
 }
 
 #ifdef __cplusplus
