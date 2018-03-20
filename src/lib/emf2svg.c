@@ -11,6 +11,7 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #ifdef DARWIN
 #include "memstream.c"
 #endif
@@ -823,31 +824,50 @@ int emf2svg(char *contents, size_t length, char **out, size_t *out_length,
     return err;
 }
 
-int femf2svg(char *contents, size_t length, const char * outputfilename,
-            generatorOptions *options) {
+int femf2svg(const char *infilename, const char * outputfilename, 
+             generatorOptions *options) {
     int err = 1;
     int OK = 1;
     drawingStates *states = createStates(options);
-    FILE *stream;
+    struct stat info;
+    if (stat(infilename, &info) >= 0) {
+        FILE *infile = fopen(infilename,"rb");
+        if( infile ) {
+            char *contents = (char *)malloc(info.st_size);
+            if (contents == NULL) {
+              printf("Failed to allocate memory for EMF\n");
+              fclose(infile);
+            } else {
+              fread(contents,info.st_size,1,infile);
+              fclose(infile);
+              FILE *stream;
 
-    // Write to a file on disk
-    stream = fopen(outputfilename,"w");
-    if (stream == NULL) {
-        if (states->verbose) {
-            printf("Failed to allocate output stream\n");
+              // Write to a file on disk
+              stream = fopen(outputfilename,"w");
+              if (stream == NULL) {
+                  if (states->verbose) {
+                     printf("Failed to allocate output stream\n");
+                  }
+                  FLAG_RESET;
+                  err = 0;
+                  OK = 0;
+              }    
+              err = __emf2svg(contents, info.st_size,states, stream, err, OK);
+              free(contents);
+              fflush(stream);
+              fclose(stream);
+            }
+        } else {
+            FLAG_RESET;
+            err = 0;
+            OK = 0;
         }
+    } else {
         FLAG_RESET;
         err = 0;
         OK = 0;
-    }    
-
-    err = __emf2svg(contents, length,states, stream, err, OK);
-
+    }
     destroyStates(states);
-
-    fflush(stream);
-    fclose(stream);
-
     return err;
 }
 
