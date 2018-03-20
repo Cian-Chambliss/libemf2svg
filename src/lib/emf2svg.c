@@ -872,6 +872,80 @@ int femf2svg(const char *infilename, const char * outputfilename,
 }
 
 
+int femf2html(int nfilename,const char **infilename, const char * outputfilename, 
+             generatorOptions *options) {
+    int err = 1;
+    int OK = 1;
+    drawingStates *states = createStates(options);
+    FILE *stream;
+    // Write to a file on disk
+    stream = fopen(outputfilename,"w");
+    if (stream == NULL) {
+        if (states->verbose) {
+            printf("Failed to allocate output stream\n");
+        }
+        FLAG_RESET;
+        err = 0;
+        OK = 0;
+    } else {
+        unsigned pageWidth = 85 * 72 * 2;
+	    unsigned pageHeight = 11 * 72 * 20;	
+        unsigned leftMargin = 0;
+        unsigned rightMargin = 0;
+        unsigned lowerMargin = 0;
+        unsigned upperMargin = 0;
+        fprintf(stream, "<html>\r\n"
+        "<!--PAPER:{ \"width\" : \"%fin\", \"height\" : \"%fin\" , \"margin\" : { \"left\" : \"%fin\" , \"right\" : \"%fin\" , \"top\" : \"%fin\" , \"bottom\" : \"%fin\" } }-->\r\n"
+        "<head>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>\r\n"
+        "<style>\r\n.pageContent{ page-break-before: always; }\r\n@page{\r\n"
+        "size: %dpt %dpt;\r\nmargin-left: %dpt;\r\nmargin-right: %dpt;\r\nmargin-top: %dpt;\r\nmargin-bottom: %dpt;"
+        "\r\n}\r\n</style>\r\n</head>\r\n<body>\r\n"
+        , (double)pageWidth / (72.0 * 20.0), (double)pageHeight / (72.0 * 20.0), (double)leftMargin / (72.0 * 20.0), (double)rightMargin / (72.0 * 20.0), (double)upperMargin / (72.0 * 20.0), (double)lowerMargin / (72.0 * 20.0)
+        , pageWidth / 20, pageHeight / 20, leftMargin / 20, rightMargin / 20, upperMargin / 20, lowerMargin / 20 );
+
+        for( int i = 0 ; i < nfilename && OK ; ++i ) {
+            struct stat info;
+            if (stat(infilename[i], &info) >= 0) {
+                FILE *infile = fopen(infilename[i],"rb");
+                if( infile ) {
+                    char *contents = (char *)malloc(info.st_size);
+                    if (contents == NULL) {
+                        printf("Failed to allocate memory for EMF\n");
+                        fclose(infile);
+                    } else {
+                        fread(contents,info.st_size,1,infile);
+                        fclose(infile);
+                        if( i > 0 ) {
+                            fprintf(stream, "<div class=\"pageContent\">");
+                        } else {
+                            fprintf(stream, "<div>");
+                        }
+                        err = __emf2svg(contents, info.st_size,states, stream, err, OK);
+                        fprintf(stream, "</div>");
+                        free(contents);
+                    }
+                } else {
+                    FLAG_RESET;
+                    err = 0;
+                    OK = 0;
+                }
+            } else {
+                FLAG_RESET;
+                err = 0;
+                OK = 0;
+            }
+        }
+        fprintf(stream, "</body>\r\n</html>\r\n" );
+
+        fflush(stream);
+        fclose(stream);
+    }
+
+    destroyStates(states);
+    return err;
+}
+
+
 int emf2svg_is_emfplus(char *contents, size_t length, bool *is_emfp) {
     size_t off = 0;
     size_t result;

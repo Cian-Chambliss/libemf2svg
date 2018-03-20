@@ -29,6 +29,8 @@ int emf2svg(char *contents, size_t length, char **out, size_t *out_length,
             generatorOptions *options);
 int femf2svg(const char *infilename, const char * outputfilename, 
              generatorOptions *options);
+int femf2html(int nfilename,const char **infilename, const char * outputfilename, 
+             generatorOptions *options);
 
 // check if emf file contains emf+ records
 int emf2svg_is_emfplus(char *contents, size_t length, bool *is_emfp);
