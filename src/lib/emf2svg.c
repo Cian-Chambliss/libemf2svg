@@ -888,16 +888,16 @@ int femf2html(int nfilename,const char **infilename, const char * outputfilename
         err = 0;
         OK = 0;
     } else {
-        unsigned pageWidth = 85 * 72 * 2;
-	    unsigned pageHeight = 11 * 72 * 20;	
-        unsigned leftMargin = 0;
-        unsigned rightMargin = 0;
-        unsigned lowerMargin = 0;
-        unsigned upperMargin = 0;
+        unsigned pageWidth = options->pageWidth ? options->pageWidth : 85 * 72 * 2;
+	    unsigned pageHeight = options->pageHeight ? options->pageHeight : 11 * 72 * 20;	
+        unsigned leftMargin = options->leftMargin;
+        unsigned rightMargin = options->rightMargin;
+        unsigned lowerMargin = options->lowerMargin;
+        unsigned upperMargin = options->upperMargin;
         fprintf(stream, "<html>\r\n"
         "<!--PAPER:{ \"width\" : \"%fin\", \"height\" : \"%fin\" , \"margin\" : { \"left\" : \"%fin\" , \"right\" : \"%fin\" , \"top\" : \"%fin\" , \"bottom\" : \"%fin\" } }-->\r\n"
         "<head>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>\r\n"
-        "<style>\r\n.pageContent{ page-break-before: always; }\r\n@page{\r\n"
+        "<style>\r\ndiv { margin: 0px; padding: 0px; }\r\n.pageContent{ page-break-before: always; }\r\n@page{\r\n"
         "size: %dpt %dpt;\r\nmargin-left: %dpt;\r\nmargin-right: %dpt;\r\nmargin-top: %dpt;\r\nmargin-bottom: %dpt;"
         "\r\n}\r\n</style>\r\n</head>\r\n<body>\r\n"
         , (double)pageWidth / (72.0 * 20.0), (double)pageHeight / (72.0 * 20.0), (double)leftMargin / (72.0 * 20.0), (double)rightMargin / (72.0 * 20.0), (double)upperMargin / (72.0 * 20.0), (double)lowerMargin / (72.0 * 20.0)

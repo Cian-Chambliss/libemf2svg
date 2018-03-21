@@ -22,6 +22,21 @@ typedef struct {
     double imgHeight;
     // width of the target image
     double imgWidth;
+    //------------ HTML print page options
+    // HTML page width
+    unsigned pageWidth;
+    // HTML page height
+	unsigned pageHeight;
+    // HTML - reserved orientation
+    bool     pageLandscape;
+    // HTML - left margin
+    unsigned leftMargin;
+    // HTML - right margin
+    unsigned rightMargin;
+    // HTML - lower margin
+    unsigned lowerMargin;
+    // HTML - upper margin
+    unsigned upperMargin;
 } generatorOptions;
 
 // convert functions
