@@ -22,6 +22,10 @@ typedef struct {
     double imgHeight;
     // width of the target image
     double imgWidth;
+    // Embedded Images (and in the case of HTML, svg pages) are stored on disk
+    bool linkResources;
+    // Path for resources
+    const char *resourcePath;
     //------------ HTML print page options
     // HTML page width
     unsigned pageWidth;

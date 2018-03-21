@@ -878,6 +878,7 @@ int femf2html(int nfilename,const char **infilename, const char * outputfilename
     int OK = 1;
     drawingStates *states = createStates(options);
     FILE *stream;
+
     // Write to a file on disk
     stream = fopen(outputfilename,"w");
     if (stream == NULL) {
@@ -920,7 +921,54 @@ int femf2html(int nfilename,const char **infilename, const char * outputfilename
                         } else {
                             fprintf(stream, "<div>");
                         }
-                        err = __emf2svg(contents, info.st_size,states, stream, err, OK);
+                        if( options->linkResources )
+                            {
+                                char resourcePath[(U_MAX_PATH*2)+1];
+                                strncpy( resourcePath , options->resourcePath , U_MAX_PATH );
+                                char *fn = resourcePath + strlen(resourcePath);
+                                const char *justFilename = infilename[i];
+                                const char *test = justFilename;
+                                while( *test )
+                                {
+                                    if(*test == '/' || *test == '\\' )
+                                        justFilename = test+1;
+                                    ++test;
+                                }
+                                const char *dot = strrchr(justFilename,'.');
+                                int length = 0;
+                                if( dot ) 
+                                {
+                                    length = (int)(dot-justFilename);
+                                } 
+                                else 
+                                {
+                                    length = strlen(justFilename);
+                                }
+                                if( length < (U_MAX_PATH - 4) )
+                                {
+                                    strncpy(fn,justFilename,length+1);
+                                }
+                                strncpy( fn + length , ".svg" ,  5 );
+                                FILE *svgstream = fopen(resourcePath,"w");
+                                if( svgstream )
+                                    {
+                                    err = __emf2svg(contents, info.st_size,states, svgstream, err, OK);
+                                    fflush(svgstream);
+                                    fclose(svgstream);
+                                    fprintf(stream, "<img src=\"%s\"/>",fn);
+                                    }
+                                else
+                                    {
+                                    printf("Failed to save resource '%s'\n",resourcePath);
+                                    FLAG_RESET;
+                                    err = 0;
+                                    OK = 0;
+                                    }
+                            }
+                        else
+                            { 
+                            err = __emf2svg(contents, info.st_size,states, stream, err, OK);
+                            }    
                         fprintf(stream, "</div>");
                         free(contents);
                     }
